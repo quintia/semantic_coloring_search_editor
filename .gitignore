@@ -1,0 +1,75 @@
+# Editor backups/temporary files
+*~
+*.swp
+
+# OS file
+## Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+## macOS
+._*
+.DS_Store
+Icon?
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.Spotlight-V100
+
+# IDE file, build file
+*.ipr
+*.iws
+*.iml
+.idea
+*.sublime-project
+*.sublime-workspace
+.gradle/
+.ipynb_checkpoints/
+.vscode/
+*.code-workspace
+
+
+# log
+log
+*.log*
+log_*
+log*/
+*log/
+
+# program binary file
+build/
+target/
+class/
+out/
+dist/
+## Python
+*.pyc
+*.pyd
+__pycache__/
+.pytest_cache/
+.coverage
+.mypy_cache/
+## JS/Node
+.yarn/
+yarn.lock
+package-lock.json
+## ts
+*.tsbuildinfo
+.tscache/
+
+
+# environment
+.env*
+venv/
+.venv/
+node_modules/
+
+# other data
+*.db
+*.sqlite
+*.sqlite3
+
+# other
+
+
