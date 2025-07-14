@@ -246,7 +246,6 @@ pub struct RgJsonMatchData {
 }
 
 pub fn search_files_compatible(pattern: &str, path: &str, options: &SearchOptions) -> SearchResultWithStatus {
-    use grep_regex::RegexMatcher;
     use ignore::Walk;
     use globset::{Glob, GlobSetBuilder};
     
@@ -314,6 +313,9 @@ pub fn search_files_compatible(pattern: &str, path: &str, options: &SearchOption
         }
     }
 
+    // Check for matches before converting to JSON
+    let has_matches = results.iter().any(|r| matches!(r, SearchResultType::Match(_)));
+    
     // Convert to ripgrep-compatible JSON format
     let json_lines: Vec<String> = results.into_iter().map(|result| {
         match result {
@@ -323,7 +325,6 @@ pub fn search_files_compatible(pattern: &str, path: &str, options: &SearchOption
     }).collect();
 
     let output = json_lines.join("\n");
-    let has_matches = results.iter().any(|r| matches!(r, SearchResultType::Match(_)));
     
     let status = if has_matches {
         SearchStatus::HasMatches
@@ -511,80 +512,4 @@ fn search_file_with_context<P: AsRef<std::path::Path>>(
     }
     
     Ok(())
-}
-
-// Keep the old function for compatibility
-fn search_file_compatible<P: AsRef<std::path::Path>>(
-    matcher: &grep_regex::RegexMatcher,
-    file_path: P,
-    results: &mut Vec<RgJsonMatch>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut search_results = Vec::new();
-    let default_options = SearchOptions {
-        ignore_case: false,
-        whole_word: false,
-        fixed_strings: false,
-        include_context: 0,
-        json_output: true,
-        line_numbers: true,
-        file_globs: Vec::new(),
-        max_columns: None,
-        max_columns_preview: false,
-        max_count: None,
-    };
-    search_file_with_context(matcher, file_path, &mut search_results, &default_options)?;
-    
-    // Extract only match results
-    for result in search_results {
-        if let SearchResultType::Match(m) = result {
-            results.push(m);
-        }
-    }
-    
-    Ok(())
-}
-
-pub fn wasm_search_files(pattern: &str, path: &str, options_json: &str) -> String {
-    let options: SearchOptions = match serde_json::from_str(options_json) {
-        Ok(opts) => opts,
-        Err(e) => {
-            return format!(r#"{{"error": "Invalid options JSON: {}"}}"#, e);
-        }
-    };
-    
-    search_files_compatible(pattern, path, &options).output
-}
-
-pub fn wasm_search_files_simple(
-    pattern: &str, 
-    path: &str, 
-    ignore_case: bool, 
-    whole_word: bool, 
-    fixed_strings: bool, 
-    context: usize,
-    file_globs_json: &str,
-    max_columns: Option<usize>,
-    max_columns_preview: bool,
-    max_count: Option<usize>
-) -> String {
-    let file_globs: Vec<String> = if file_globs_json.is_empty() {
-        Vec::new()
-    } else {
-        serde_json::from_str(file_globs_json).unwrap_or_default()
-    };
-
-    let options = SearchOptions {
-        ignore_case,
-        whole_word,
-        fixed_strings,
-        include_context: context,
-        json_output: true,
-        line_numbers: true,
-        file_globs,
-        max_columns,
-        max_columns_preview,
-        max_count,
-    };
-    
-    search_files_compatible(pattern, path, &options).output
 }
