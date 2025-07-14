@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Grep</title>
+    <style>{{CSS_CONTENT}}</style>
+</head>
+<body>
+    <div class="search-container">
+        <div class="search-layout">
+            <div class="search-inputs">
+                <div class="search-input-row">
+                    <div class="search-input-container">
+                        <input type="text" id="searchInput" tabindex="1" placeholder="Enter search term..." />
+                        <button type="button" class="history-button-inline" id="historyBtn" tabindex="-1" title="Search History">📋</button>
+                    </div>
+                    <div class="search-options">
+                        <button type="button" class="option-button" id="ignoreCaseBtn" tabindex="4" title="Match Case">Aa</button>
+                        <button type="button" class="option-button" id="wholeWordBtn" tabindex="5" title="Match Whole Word">|ab|</button>
+                        <button type="button" class="option-button" id="regexBtn" tabindex="6" title="Use Regular Expression">.*</button>
+                    </div>
+                </div>
+                <div class="search-input-row">
+                    <div class="pattern-path-container">
+                        <div class="pattern-input-container search-input-container">
+                            <input type="text" id="filePatternInput" tabindex="2" placeholder="File pattern (e.g., *.js, src/)..." />
+                        </div>
+                        <div class="path-input-container search-input-container">
+                            <input type="text" id="pathInput" tabindex="3" placeholder="Path (e.g., src/, docs/)..." />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="performSearch()" class="search-button" tabindex="8">Search</button>
+        </div>
+        <div class="history-dropdown" id="historyDropdown">
+            <div class="history-dropdown-content" id="historyDropdownContent">
+                <!-- History items will be populated here -->
+            </div>
+        </div>
+    </div>
+    
+    <div id="historyContainer" class="history-container"></div>
+
+    <script>{{JS_CONTENT}}</script>
+</body>
+</html>

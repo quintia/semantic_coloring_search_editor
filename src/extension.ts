@@ -1,30 +1,62 @@
 import * as vscode from 'vscode';
-import { exec } from 'child_process';
-import * as path from 'path';
+import { 
+    SearchMessage, 
+    DeleteHistoryMessage, 
+    OpenFileMessage,
+    WebViewMessage 
+} from './types/interfaces';
+import { 
+    loadSearchHistory, 
+    addToSearchHistory, 
+    deleteFromSearchHistory 
+} from './history/search-history';
+import { performSearch } from './search/search-engine';
+import { generateDisplayStrings } from './ui/webview-content';
+import { loadWebviewContent } from './ui/webview-loader';
+
+// Global reference to the current panel
+let currentPanel: vscode.WebviewPanel | undefined = undefined;
 
 export function activate(context: vscode.ExtensionContext) {
     const disposable = vscode.commands.registerCommand('semantic-color-grep-edit.search', () => {
+        // If panel already exists, just reveal it
+        if (currentPanel) {
+            currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+        
         const panel = vscode.window.createWebviewPanel(
             'semanticColorGrepEdit',
-            'Semantic Color Grep Edit',
+            'Color Grep',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                retainContextWhenHidden: true
+                retainContextWhenHidden: true,
+                enableCommandUris: true
             }
         );
+        
+        // Store reference to current panel
+        currentPanel = panel;
 
-        panel.webview.html = getWebviewContent();
+        panel.webview.html = loadWebviewContent();
 
+        // Send initial data to webview
+        sendInitialData(panel, context);
+
+        // Handle messages from webview
         panel.webview.onDidReceiveMessage(
-            message => {
-                switch (message.command) {
-                    case 'search':
-                        performSearch(message.text, message.directory, panel);
-                        break;
-                }
-            },
+            (message: WebViewMessage) => handleWebViewMessage(message, panel, context),
             undefined,
+            context.subscriptions
+        );
+        
+        // Clear panel reference when disposed
+        panel.onDidDispose(
+            () => {
+                currentPanel = undefined;
+            },
+            null,
             context.subscriptions
         );
     });
@@ -32,204 +64,111 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
-function getWebviewContent(): string {
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Semantic Color Grep Edit</title>
-    <style>
-        body {
-            font-family: var(--vscode-font-family);
-            font-size: var(--vscode-font-size);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 20px;
-        }
-        .search-container {
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            width: 70%;
-            padding: 8px;
-            margin-right: 10px;
-            background-color: var(--vscode-input-background);
-            color: var(--vscode-input-foreground);
-            border: 1px solid var(--vscode-input-border);
-        }
-        button {
-            padding: 8px 16px;
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: var(--vscode-button-hoverBackground);
-        }
-        .results {
-            white-space: pre-wrap;
-            font-family: var(--vscode-editor-font-family);
-            background-color: var(--vscode-editor-background);
-            padding: 10px;
-            border: 1px solid var(--vscode-panel-border);
-            max-height: 600px;
-            overflow-y: auto;
-        }
-        .error {
-            color: var(--vscode-errorForeground);
-        }
-        a {
-            color: var(--vscode-textLink-foreground);
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Enter search term..." />
-        <input type="text" id="directoryInput" placeholder="Search directory (optional)..." />
-        <button onclick="performSearch()">Search</button>
-    </div>
-    <div id="results" class="results"></div>
-
-    <script>
-        const vscode = acquireVsCodeApi();
-        
-        function performSearch() {
-            const searchInput = document.getElementById('searchInput');
-            const directoryInput = document.getElementById('directoryInput');
-            const searchText = searchInput.value.trim();
-            const directory = directoryInput.value.trim();
-            
-            if (!searchText) {
-                return;
-            }
-            
-            vscode.postMessage({
-                command: 'search',
-                text: searchText,
-                directory: directory
-            });
-        }
-        
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
-        
-        window.addEventListener('message', event => {
-            const message = event.data;
-            switch (message.command) {
-                case 'searchResult':
-                    document.getElementById('results').innerHTML = message.html;
-                    break;
-            }
-        });
-    </script>
-</body>
-</html>`;
-}
-
-function performSearch(searchText: string, directory: string, panel: vscode.WebviewPanel) {
-    let searchPath: string;
-    let cwd: string;
-
-    if (directory && directory.trim() !== '') {
-        // Use provided directory
-        searchPath = directory.trim();
-        cwd = searchPath;
-    } else {
-        // Use workspace root if available, otherwise current working directory
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (workspaceFolder) {
-            searchPath = workspaceFolder.uri.fsPath;
-            cwd = searchPath;
-        } else {
-            searchPath = '.';
-            cwd = process.cwd();
-        }
-    }
-
-    const escapedSearchText = searchText.replace(/"/g, '\\"');
-    const command = `rg --colors='path:none' --colors='line:none' --colors='column:none' "${escapedSearchText}" "${searchPath}"`;
+function sendInitialData(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
+    // Send theme information
+    const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
+    panel.webview.postMessage({
+        command: 'themeInfo',
+        isDark: isDark
+    });
     
-    exec(command, { cwd: cwd }, (error, stdout, stderr) => {
-        let html = '';
-        
-        if (stdout) {
-            html += convertAnsiToHtml(stdout);
-        }
-        
-        if (stderr) {
-            html += `<div class="error">${escapeHtml(stderr)}</div>`;
-        }
-        
-        if (error && !stdout && !stderr) {
-            html = '<div class="error">No matches found or rg command failed</div>';
-        }
-        
-        panel.webview.postMessage({
-            command: 'searchResult',
-            html: html
-        });
+    // Send search history
+    const searchHistory = loadSearchHistory(context);
+    panel.webview.postMessage({
+        command: 'searchHistory',
+        history: searchHistory
+    });
+    
+    // Send workspace information
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    const workspaceRoot = workspaceFolder?.uri.fsPath;
+    panel.webview.postMessage({
+        command: 'baseDirInfo',
+        baseDir: workspaceRoot || null,
+        hasWorkspace: !!workspaceRoot
     });
 }
 
-function convertAnsiToHtml(text: string): string {
-    // ANSIエスケープシーケンスをHTMLに変換
-    let html = text;
-    
-    // リセット
-    html = html.replace(/\x1b\[0m/g, '</span>');
-    
-    // 色指定
-    html = html.replace(/\x1b\[31m/g, '<span style="color: #ff6b6b;">'); // 赤
-    html = html.replace(/\x1b\[32m/g, '<span style="color: #51cf66;">'); // 緑
-    html = html.replace(/\x1b\[33m/g, '<span style="color: #ffd43b;">'); // 黄
-    html = html.replace(/\x1b\[34m/g, '<span style="color: #339af0;">'); // 青
-    html = html.replace(/\x1b\[35m/g, '<span style="color: #f783ac;">'); // マゼンタ
-    html = html.replace(/\x1b\[36m/g, '<span style="color: #22b8cf;">'); // シアン
-    html = html.replace(/\x1b\[37m/g, '<span style="color: #ffffff;">'); // 白
-    
-    // 太字
-    html = html.replace(/\x1b\[1m/g, '<span style="font-weight: bold;">');
-    
-    // ファイルパス:行番号をリンクに変換
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (workspaceFolder) {
-        const workspacePath = workspaceFolder.uri.fsPath;
-        html = html.replace(/([^\s]+):(\d+):/g, (match, filePath, lineNumber) => {
-            const fullPath = path.resolve(workspacePath, filePath);
-            const uri = vscode.Uri.file(fullPath);
-            return `<a href="command:vscode.open?${encodeURIComponent(JSON.stringify([uri, { selection: new vscode.Range(parseInt(lineNumber) - 1, 0, parseInt(lineNumber) - 1, 0) }]))}">${match}</a>`;
-        });
+function handleWebViewMessage(
+    message: WebViewMessage, 
+    panel: vscode.WebviewPanel, 
+    context: vscode.ExtensionContext
+) {
+    switch (message.command) {
+        case 'search':
+            handleSearchMessage(message as SearchMessage, panel, context);
+            break;
+        case 'deleteHistory':
+            handleDeleteHistoryMessage(message as DeleteHistoryMessage, panel, context);
+            break;
+        case 'openFile':
+            handleOpenFileMessage(message as OpenFileMessage);
+            break;
     }
-    
-    // HTMLエスケープ（リンク部分以外）
-    html = html.replace(/&/g, '&amp;')
-               .replace(/</g, '&lt;')
-               .replace(/>/g, '&gt;');
-    
-    // リンクを元に戻す
-    html = html.replace(/&lt;a href="([^"]*)"&gt;([^&]*)&lt;\/a&gt;/g, '<a href="$1">$2</a>');
-    html = html.replace(/&lt;span([^&]*)&gt;/g, '<span$1>');
-    html = html.replace(/&lt;\/span&gt;/g, '</span>');
-    
-    return html;
 }
 
-function escapeHtml(text: string): string {
-    return text.replace(/&/g, '&amp;')
-               .replace(/</g, '&lt;')
-               .replace(/>/g, '&gt;')
-               .replace(/"/g, '&quot;')
-               .replace(/'/g, '&#039;');
+function handleSearchMessage(
+    message: SearchMessage, 
+    panel: vscode.WebviewPanel, 
+    context: vscode.ExtensionContext
+) {
+    // Add to persistent history
+    const newHistory = addToSearchHistory(context, message.text);
+    
+    // Generate display strings
+    const { searchTextDisplay, filePatternDisplay, pathDisplay } = generateDisplayStrings(
+        message.text, 
+        message.filePattern || '',
+        message.options,
+        message.path
+    );
+    
+    // Send display strings to webview
+    panel.webview.postMessage({
+        command: 'setDisplayStrings',
+        historyId: message.historyId,
+        searchTextDisplay: searchTextDisplay,
+        filePatternDisplay: filePatternDisplay,
+        pathDisplay: pathDisplay
+    });
+    
+    // Perform search
+    const filePatternToUse = message.filePattern || '';
+    
+    performSearch(
+        message.text, 
+        filePatternToUse,
+        panel, 
+        message.historyId, 
+        message.options,
+        message.path
+    );
+    
+    // Send updated history to webview
+    panel.webview.postMessage({
+        command: 'searchHistory',
+        history: newHistory
+    });
+}
+
+function handleDeleteHistoryMessage(
+    message: DeleteHistoryMessage, 
+    panel: vscode.WebviewPanel, 
+    context: vscode.ExtensionContext
+) {
+    deleteFromSearchHistory(context, message.text);
+    // Send updated history to webview
+    const updatedHistory = loadSearchHistory(context);
+    panel.webview.postMessage({
+        command: 'searchHistory',
+        history: updatedHistory
+    });
+}
+
+function handleOpenFileMessage(message: OpenFileMessage) {
+    const uri = vscode.Uri.file(message.filePath);
+    const range = new vscode.Range(message.lineNumber, 0, message.lineNumber, 0);
+    vscode.window.showTextDocument(uri, { selection: range });
 }
 
 export function deactivate() {}

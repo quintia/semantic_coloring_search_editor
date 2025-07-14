@@ -1,8 +1,17 @@
 {
-  "name": "semantic-color-grep-edit",
-  "displayName": "Semantic Color Grep Edit",
-  "description": "A VS Code extension for searching with ripgrep and displaying colorized results with file links",
-  "version": "0.0.1",
+  "name": "semantic-coloring-search-editor",
+  "displayName": "Semantic Coloring Search Editor",
+  "description": "A VS Code extension for file search with colorized results. Use it as an alternative to VS Code's built-in Search Editor.",
+  "version": "0.1.1",
+  "publisher": "quintia",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quintia/vscode-semantic-color-grep.git"
+  },
+  "bugs": {
+    "url": "https://github.com/quintia/vscode-semantic-color-grep/issues"
+  },
+  "homepage": "https://github.com/quintia/vscode-semantic-color-grep#readme",
   "engines": {
     "vscode": "^1.60.0"
   },
@@ -17,14 +26,15 @@
     "commands": [
       {
         "command": "semantic-color-grep-edit.search",
-        "title": "Semantic Color Grep Edit: Search"
+        "title": "Semantic Coloring Search Editor: Search"
       }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile && npm run build-binary",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "build-binary": "cd file_walker && mkdir -p ../bin && PATH=\"$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH\" cargo build --release --target aarch64-apple-darwin --bin file_walker && PATH=\"$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH\" cargo build --release --target x86_64-apple-darwin --bin file_walker && PATH=\"$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH\" cargo build --release --target x86_64-pc-windows-gnu --bin file_walker && cp target/aarch64-apple-darwin/release/file_walker ../bin/file_walker-darwin-arm64 && cp target/x86_64-apple-darwin/release/file_walker ../bin/file_walker-darwin-x64 && cp target/x86_64-pc-windows-gnu/release/file_walker.exe ../bin/file_walker-win32-x64.exe"
   },
   "devDependencies": {
     "@types/vscode": "^1.60.0",

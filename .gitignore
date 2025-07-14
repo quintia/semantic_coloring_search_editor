@@ -2,7 +2,7 @@
 *~
 *.swp
 
-# OS file
+# OS files
 ## Windows
 Thumbs.db
 ehthumbs.db
@@ -17,7 +17,7 @@ Icon?
 .com.apple.timemachine.donotpresent
 .Spotlight-V100
 
-# IDE file, build file
+# IDE file, build files
 *.ipr
 *.iws
 *.iml
@@ -28,7 +28,7 @@ Icon?
 .ipynb_checkpoints/
 .vscode/
 *.code-workspace
-
+.claude/
 
 # log
 log
@@ -37,12 +37,13 @@ log_*
 log*/
 *log/
 
-# program binary file
+# program binary files
 build/
 target/
 class/
 out/
 dist/
+bin/
 ## Python
 *.pyc
 *.pyd
@@ -50,20 +51,29 @@ __pycache__/
 .pytest_cache/
 .coverage
 .mypy_cache/
-## JS/Node
-.yarn/
-yarn.lock
+## JavaScript/Node.js
+node_modules/
 package-lock.json
-## ts
+.yarn/cache/
+.yarn/install-state.gz
+yarn.lock
+.pnp
+.pnp.js
+## TypeScript
 *.tsbuildinfo
 .tscache/
+## Rust
+Cargo.lock
+## Go
+vendor/
 
-
-# environment
-.env*
+# virtual environment
 venv/
 .venv/
-node_modules/
+
+# envrionment variable
+.env*
+
 
 # other data
 *.db
@@ -71,5 +81,5 @@ node_modules/
 *.sqlite3
 
 # other
-
+*.vsix
 
