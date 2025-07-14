@@ -179,6 +179,18 @@ pub struct SearchOptions {
     pub max_count: Option<usize>,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum SearchStatus {
+    HasMatches,
+    NoMatches,
+    Error(String),
+}
+
+pub struct SearchResultWithStatus {
+    pub output: String,
+    pub status: SearchStatus,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RgJsonMatch {
     #[serde(rename = "type")]
@@ -233,7 +245,7 @@ pub struct RgJsonMatchData {
     text: String,
 }
 
-pub fn search_files_compatible(pattern: &str, path: &str, options: &SearchOptions) -> String {
+pub fn search_files_compatible(pattern: &str, path: &str, options: &SearchOptions) -> SearchResultWithStatus {
     use grep_regex::RegexMatcher;
     use ignore::Walk;
     use globset::{Glob, GlobSetBuilder};
@@ -251,7 +263,10 @@ pub fn search_files_compatible(pattern: &str, path: &str, options: &SearchOption
     } {
         Ok(m) => m,
         Err(e) => {
-            return format!(r#"{{"error": "Invalid regex pattern: {}"}}"#, e);
+            return SearchResultWithStatus {
+                output: format!(r#"{{"error": "Invalid regex pattern: {}"}}"#, e),
+                status: SearchStatus::Error(format!("Invalid regex pattern: {}", e)),
+            };
         }
     };
 
@@ -307,7 +322,16 @@ pub fn search_files_compatible(pattern: &str, path: &str, options: &SearchOption
         }
     }).collect();
 
-    json_lines.join("\n")
+    let output = json_lines.join("\n");
+    let has_matches = results.iter().any(|r| matches!(r, SearchResultType::Match(_)));
+    
+    let status = if has_matches {
+        SearchStatus::HasMatches
+    } else {
+        SearchStatus::NoMatches
+    };
+    
+    SearchResultWithStatus { output, status }
 }
 
 #[derive(Debug)]
@@ -528,7 +552,7 @@ pub fn wasm_search_files(pattern: &str, path: &str, options_json: &str) -> Strin
         }
     };
     
-    search_files_compatible(pattern, path, &options)
+    search_files_compatible(pattern, path, &options).output
 }
 
 pub fn wasm_search_files_simple(
@@ -562,5 +586,5 @@ pub fn wasm_search_files_simple(
         max_count,
     };
     
-    search_files_compatible(pattern, path, &options)
+    search_files_compatible(pattern, path, &options).output
 }

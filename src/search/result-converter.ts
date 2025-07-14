@@ -194,7 +194,7 @@ export function convertCgrJsonToHtml(text: string, searchPath: string, isDark: b
             }
         }
         
-        return html || '<div class="error">No matches found</div>';
+        return html || '<div class="no-matches">No matches found</div>';
         
     } catch (error) {
         return `<div class="error">Error parsing search results: ${escapeHtml(String(error))}</div>`;

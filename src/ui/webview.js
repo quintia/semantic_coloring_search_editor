@@ -211,10 +211,14 @@ function createHistoryEntry(entry, hasResults, isError = false) {
     if (isError) {
         // Error case: only Delete button
         buttonsHtml = '<button class="history-button" onclick="deleteSearch(' + entry.id + ')">Delete</button>';
-    } else {
+    } else if (hasResults) {
         // Success case: Context toggle, Reload, and Delete buttons
         buttonsHtml = '<button class="history-button" id="toggle-context-' + entry.id + '" onclick="toggleContextDisplay(' + entry.id + ')">Hide Context</button>' +
                      '<button class="history-button" onclick="reloadSearch(' + entry.id + ')">Reload</button>' +
+                     '<button class="history-button" onclick="deleteSearch(' + entry.id + ')">Delete</button>';
+    } else {
+        // No matches case: Reload and Delete buttons (no context toggle)
+        buttonsHtml = '<button class="history-button" onclick="reloadSearch(' + entry.id + ')">Reload</button>' +
                      '<button class="history-button" onclick="deleteSearch(' + entry.id + ')">Delete</button>';
     }
         
@@ -335,7 +339,7 @@ window.addEventListener('message', event => {
                     const entry = searchHistory.find(h => h.id === message.historyId);
                     if (entry) {
                         const historyContainer = document.getElementById('historyContainer');
-                        const isError = !message.hasResults && message.html && message.html.includes('class="error"');
+                        const isError = !message.hasResults && message.html && message.html.includes('class="error"') && !message.html.includes('No matches found');
                         historyContainer.insertAdjacentHTML('afterbegin', createHistoryEntry(entry, message.hasResults, isError));
                     }
                 }
@@ -417,7 +421,7 @@ window.addEventListener('message', event => {
                             
                             const displayText = baseText + (optionIndicators ? ' ' + optionIndicators : '');
                             // Check if this is an error message
-                            const isError = message.html && message.html.includes('class="error"');
+                            const isError = message.html && message.html.includes('class="error"') && !message.html.includes('No matches found');
                             labelElement.textContent = displayText + (isError ? ' (Error)' : ' (0)');
                         }
                     }

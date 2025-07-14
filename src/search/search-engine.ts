@@ -150,8 +150,16 @@ export function performSearch(
             html += `<div class="error">${escapeHtml(stderr)}</div>`;
         }
         
-        if (error && !stdout && !stderr) {
-            html = '<div class="error">No matches found or rg command failed</div>';
+        if (error && !stdout) {
+            // Check exit code to distinguish between no matches (1) and real errors (2+)
+            const exitCode = error.code;
+            if (exitCode === 1 && !stderr) {
+                // Exit code 1 with no stderr means no matches found (normal for ripgrep)
+                html = '<div class="no-matches">No matches found</div>';
+            } else if (!html) {
+                // Exit code 2+ or other errors
+                html = '<div class="error">Search command failed</div>';
+            }
         }
         
         const hasResults = stdout && stdout.trim().length > 0;

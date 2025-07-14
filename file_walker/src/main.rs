@@ -1,4 +1,5 @@
-use file_walker::{walk_directory, search_files_compatible, SearchOptions};
+use file_walker::{walk_directory, search_files_compatible, SearchOptions, SearchStatus};
+use std::process;
 use clap::{Parser, ArgAction};
 
 #[derive(Parser)]
@@ -92,7 +93,14 @@ fn main() {
         let default_path = ".".to_string();
         let path = cli.paths.first().unwrap_or(&default_path);
         let result = search_files_compatible(&cli.pattern, path, &search_options);
-        println!("{}", result);
+        println!("{}", result.output);
+        
+        // Set appropriate exit status to match ripgrep behavior
+        match result.status {
+            SearchStatus::HasMatches => process::exit(0),
+            SearchStatus::NoMatches => process::exit(1),
+            SearchStatus::Error(_) => process::exit(2),
+        }
     }
 }
 
