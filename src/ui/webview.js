@@ -453,6 +453,10 @@ window.addEventListener('message', event => {
                 }
             }
             break;
+        case 'focusSearchInput':
+            // Focus on search input when window is activated
+            document.getElementById('searchInput').focus();
+            break;
     }
 });
 

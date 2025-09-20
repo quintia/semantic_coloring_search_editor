@@ -19,9 +19,13 @@ let currentPanel: vscode.WebviewPanel | undefined = undefined;
 
 export function activate(context: vscode.ExtensionContext) {
     const disposable = vscode.commands.registerCommand('semantic-color-grep-edit.search', () => {
-        // If panel already exists, just reveal it
+        // If panel already exists, just reveal it and restore focus
         if (currentPanel) {
             currentPanel.reveal(vscode.ViewColumn.One);
+            // Send focus message to webview after revealing
+            currentPanel.webview.postMessage({
+                command: 'focusSearchInput'
+            });
             return;
         }
         
