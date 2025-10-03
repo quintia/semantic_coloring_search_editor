@@ -2,7 +2,7 @@
   "name": "semantic-coloring-search-editor",
   "displayName": "Semantic Coloring Search Editor",
   "description": "A VS Code extension for file search with colorized results. Use it as an alternative to VS Code's built-in Search Editor.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "quintia",
   "repository": {
     "type": "git",

@@ -8,7 +8,12 @@ body {
     font-size: var(--vscode-font-size);
     color: var(--vscode-foreground);
     background-color: var(--vscode-editor-background);
-    padding: 20px;
+    padding: 0;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /* HTML element output with tight line spacing */
@@ -19,14 +24,17 @@ body {
 }
 
 .search-container {
-    margin: 0 20px 20px 20px;
+    flex-shrink: 0;
+    padding: 20px 20px 10px 20px;
+    background-color: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-widget-border);
 }
 
 .search-layout {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .search-inputs {
@@ -261,7 +269,9 @@ body {
 }
 
 .history-container {
-    margin: 20px 20px 0 20px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 40px 20px 20px;
 }
 
 .history-entry {
